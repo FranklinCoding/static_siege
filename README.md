@@ -1,4 +1,4 @@
-# static siege:: Card Roguelike
+# static siege: Card Roguelike
 
 Static Siege: Card Roguelike is a single-file, "pure" JavaScript game that blends reverse tower defense with deck-building mechanics. Defend your central Core against increasingly difficult waves of enemies by playing cards, managing a "Fuel" resource, and strategically upgrading your deck. This project is built with only HTML5 Canvas and vanilla JavaScript, no external game libraries needed.
 
