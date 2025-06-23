@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Static Siege: Card Roguelike</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #0a0a1a;
+            font-family: 'Orbitron', sans-serif;
+            color: #00ffff;
+            overflow: hidden;
+        }
+        canvas {
+            background-color: #0a0a1a;
+            cursor: crosshair;
+        }
+        #tooltip {
+            position: absolute;
+            display: none;
+            background: rgba(10, 10, 30, 0.9);
+            border: 2px solid #00ffff;
+            border-radius: 8px;
+            padding: 15px;
+            width: 250px;
+            pointer-events: none;
+            box-shadow: 0 0 15px #00ffff;
+            transition: opacity 0.1s ease-in-out;
+        }
+        #tooltip-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #ffff00;
+            margin-bottom: 10px;
+        }
+        #tooltip-cost {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-size: 24px;
+            font-weight: 700;
+            color: #ff00ff;
+        }
+        #tooltip-type {
+            font-size: 14px;
+            color: #00ffff;
+            margin-bottom: 15px;
+            font-style: italic;
+        }
+        #tooltip-desc {
+            font-size: 16px;
+            color: #ffffff;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+    <div id="tooltip">
+        <div id="tooltip-title">Card Title</div>
+        <div id="tooltip-cost">3</div>
+        <div id="tooltip-type">Card Type</div>
+        <div id="tooltip-desc">This is the detailed description of the card's effect.</div>
+    </div>
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+    // ====================================================================================
+    // I. GAME SETUP & MANAGERS
+    // ====================================================================================
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const tooltip = document.getElementById('tooltip');
+
+    const GameState = { RUNNING: 'RUNNING', SHOP: 'SHOP', GAMEOVER: 'GAMEOVER' };
+
+    const GameManager = {
+        state: GameState.RUNNING,
+        wave: 0,
+        pointsToNextFuel: 100,
+        
+        init() {
+            canvas.width = Math.min(window.innerWidth, 1280);
+            canvas.height = Math.min(window.innerHeight, 720);
+            
+            PlayerManager.init();
+            CardManager.init();
+            UIManager.init();
+            
+            this.nextWave();
+            GameManager.loop();
+        },
+        
+        loop(timestamp) {
+            const deltaTime = (timestamp - (this.lastTime || 0)) / 1000;
+            this.lastTime = timestamp;
+
+            ctx.save();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ParticleManager.applyScreenShake();
+            
+            Renderer.drawBackgroundGrid();
+            
+            if (this.state === GameState.RUNNING) {
+                PlayerManager.update(deltaTime);
+                EnemyManager.update(deltaTime);
+            }
+            
+            ParticleManager.update(deltaTime);
+            UIManager.update(deltaTime);
+            
+            Renderer.drawAll();
+            
+            ctx.restore();
+            requestAnimationFrame(this.loop.bind(this));
+        },
+        
+        nextWave() {
+            this.wave++;
+            if (this.wave > 1 && (this.wave - 1) % 5 === 0) {
+                this.state = GameState.SHOP;
+                ShopManager.generateWares();
+            } else {
+                this.state = GameState.RUNNING;
+                EnemyManager.spawnWave(this.wave);
+                CardManager.drawCards(2);
+            }
+        },
+        
+        addPoints(points) {
+            this.pointsToNextFuel -= points;
+            while(this.pointsToNextFuel <= 0) {
+                PlayerManager.addFuel(1);
+                this.pointsToNextFuel += 100;
+            }
+        },
+
+        gameOver() {
+            this.state = GameState.GAMEOVER;
+        }
+    };
+
+    // ====================================================================================
+    // II. CARD SYSTEM
+    // ====================================================================================
+    const CardManager = {
+        masterCardList: {
+            // Starter Cards
+            'starter_boost': { name: "Minor Boost", cost: 2, type: "Attack", desc: "Increase fire rate of one random weapon by 20% for this wave.", effect: () => PlayerManager.applyTempBoost('fireRate', 0.8) },
+            'starter_sharpen': { name: "Sharpened Bolts", cost: 2, type: "Attack", desc: "Increase damage of one random weapon by 1 for this wave.", effect: () => PlayerManager.applyTempBoost('damage', 1) },
+            'starter_repair': { name: "Quick Repair", cost: 3, type: "Defense", desc: "Instantly restore 10 Core health.", effect: () => PlayerManager.heal(10) },
+            'starter_barrier': { name: "Emergency Barrier", cost: 4, type: "Defense", desc: "The Core gains a temporary shield that blocks the next 3 enemy hits.", effect: () => PlayerManager.addShield(3) },
+            'starter_siphon': { name: "Fuel Siphon", cost: 1, type: "Utility", desc: "Instantly gain 2 Fuel.", effect: () => PlayerManager.addFuel(2) },
+            'starter_recycle': { name: "Recycle", cost: 0, type: "Utility", desc: "Discard a card from your hand to draw a new one.", effect: (card) => { UIManager.isRecycling = card; } },
+            'starter_perm_health': { name: "Core Upgrade", cost: 8, type: "Permanent", desc: "Permanently increase the Core's max health by 10. This card is removed from your deck after being played.", isExiled: true, effect: () => PlayerManager.increaseMaxHealth(10) },
+            
+            // Shop Cards
+            'shop_overcharge': { name: "Overcharge", cost: 5, type: "Attack", desc: "All weapons fire 50% faster and deal +2 damage for 10 seconds.", effect: () => PlayerManager.applyGlobalBoost({fireRate: 0.5, damage: 2}, 10) },
+            'shop_nova': { name: "Singularity", cost: 6, type: "Attack", desc: "Create a massive explosion, dealing 10 damage to all enemies on screen.", effect: () => EnemyManager.damageAll(10) },
+            'shop_fortify': { name: "Fortify", cost: 7, type: "Permanent", desc: "Permanently increase the Core's base armor by 1. Removes itself from the deck.", isExiled: true, effect: () => PlayerManager.increaseArmor(1) },
+            'shop_refinery': { name: "Scrap Refinery", cost: 6, type: "Permanent", desc: "Permanently gain +1 Scrap from each enemy destroyed. Removes itself from the deck.", isExiled: true, effect: () => PlayerManager.scrapMultiplier += 1 },
+            'shop_autoloader': { name: "Autoloader", cost: 5, type: "Utility", desc: "Draw 3 cards immediately.", effect: () => CardManager.drawCards(3) },
+            'shop_nanites': { name: "Repair Nanites", cost: 4, type: "Defense", desc: "Heal 5 Core health now, and 2 health per second for the next 10 seconds.", effect: () => PlayerManager.applyHealOverTime(2, 10, 5) },
+        },
+        deck: [],
+        hand: [],
+        discard: [],
+        
+        init() {
+            const starterDeck = [
+                'starter_boost', 'starter_boost',
+                'starter_sharpen', 'starter_sharpen',
+                'starter_repair', 'starter_repair',
+                'starter_barrier',
+                'starter_siphon',
+                'starter_recycle',
+                'starter_perm_health'
+            ];
+            this.deck = starterDeck.map(id => ({ ...this.masterCardList[id], id: id, uid: Math.random() }));
+            this.shuffleDeck();
+            this.drawCards(4);
+        },
+        
+        shuffleDeck() {
+            for (let i = this.deck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [this.deck[i], this.deck[j]] = [this.deck[j], this.deck[i]];
+            }
+        },
+        
+        drawCards(amount) {
+            for (let i = 0; i < amount; i++) {
+                if (this.hand.length >= 7) break;
+                if (this.deck.length === 0) {
+                    if (this.discard.length === 0) break; // No cards left anywhere
+                    this.deck = [...this.discard];
+                    this.discard = [];
+                    this.shuffleDeck();
+                }
+                this.hand.push(this.deck.pop());
+            }
+            UIManager.recalculateHandPositions();
+        },
+        
+        playCard(card, cardIndex) {
+            if (PlayerManager.fuel < card.cost) {
+                UIManager.flashCardRed(cardIndex);
+                return;
+            }
+
+            if (UIManager.isRecycling) {
+                // If we are in recycle mode, clicking any other card cancels it.
+                UIManager.isRecycling = null;
+                return;
+            }
+
+            PlayerManager.spendFuel(card.cost);
+            card.effect(card);
+            ParticleManager.createEffect('cardPlay', { x: UIManager.handPositions[cardIndex].x + UIManager.cardWidth / 2, y: UIManager.handPositions[cardIndex].y });
+            
+            if (!card.isExiled) {
+                 this.discard.push(card);
+            }
+            this.hand.splice(cardIndex, 1);
+            UIManager.recalculateHandPositions();
+        },
+
+        discardCard(cardIndex) {
+            const card = this.hand[cardIndex];
+            this.discard.push(card);
+            this.hand.splice(cardIndex, 1);
+            UIManager.recalculateHandPositions();
+        }
+    };
+    
+    // ====================================================================================
+    // III. PLAYER & CORE SYSTEMS
+    // ====================================================================================
+    const PlayerManager = {
+        x: 0, y: 0, radius: 30,
+        maxHealth: 100, health: 100,
+        maxFuel: 10, fuel: 5,
+        scrap: 0, scrapMultiplier: 1,
+        armor: 0, shield: 0,
+        weapons: [],
+        tempBoosts: [],
+        timedEffects: [],
+
+        init() {
+            this.x = canvas.width / 2;
+            this.y = canvas.height / 2;
+            this.weapons.push({ name: "Pulse Cannon", damage: 1, fireRate: 1, lastFired: 0, baseDamage: 1, baseFireRate: 1 });
+        },
+
+        update(deltaTime) {
+            this.weapons.forEach(w => {
+                w.lastFired += deltaTime;
+                if(w.lastFired >= w.fireRate) {
+                    const target = EnemyManager.findNearest(this.x, this.y);
+                    if(target) {
+                        ParticleManager.createEffect('projectile', {
+                            x: this.x, y: this.y, target: target, damage: w.damage
+                        });
+                        w.lastFired = 0;
+                    }
+                }
+            });
+            
+            // Update timed effects
+            this.timedEffects = this.timedEffects.filter(effect => {
+                effect.duration -= deltaTime;
+                if(effect.tick) {
+                    effect.timeSinceTick += deltaTime;
+                    if(effect.timeSinceTick >= 1) {
+                         effect.timeSinceTick -= 1;
+                         effect.onTick();
+                    }
+                }
+                if(effect.duration <= 0) {
+                    if (effect.onEnd) effect.onEnd();
+                    return false;
+                }
+                return true;
+            });
+        },
+        
+        takeDamage(amount) {
+            ParticleManager.createEffect('screenShake', { intensity: 5, duration: 0.2 });
+            let damageToTake = amount - this.armor;
+            if (damageToTake <= 0) return;
+
+            if(this.shield > 0) {
+                const blocked = Math.min(this.shield, damageToTake);
+                this.shield -= blocked;
+                damageToTake -= blocked;
+                ParticleManager.createEffect('shieldHit', { x: this.x, y: this.y });
+            }
+            
+            if(damageToTake > 0) {
+                 this.health -= damageToTake;
+            }
+
+            if (this.health <= 0) {
+                this.health = 0;
+                GameManager.gameOver();
+            }
+        },
+
+        heal(amount) { this.health = Math.min(this.maxHealth, this.health + amount); },
+        addFuel(amount) { this.fuel = Math.min(this.maxFuel, this.fuel + amount); },
+        spendFuel(amount) { this.fuel -= amount; },
+        addScrap(amount) { this.scrap += amount * this.scrapMultiplier; },
+        spendScrap(amount) { this.scrap -= amount; },
+        addShield(amount) { this.shield += amount; },
+        increaseMaxHealth(amount) { this.maxHealth += amount; this.health += amount; },
+        increaseArmor(amount) { this.armor += amount; },
+
+        applyTempBoost(stat, value) {
+            if (this.weapons.length === 0) return;
+            const weaponIndex = Math.floor(Math.random() * this.weapons.length);
+            const weapon = this.weapons[weaponIndex];
+            if (stat === 'damage') weapon.damage += value;
+            if (stat === 'fireRate') weapon.fireRate *= value;
+            this.tempBoosts.push({ weaponIndex, stat, value });
+        },
+
+        applyGlobalBoost(boosts, duration) {
+            this.weapons.forEach(w => {
+                if(boosts.damage) w.damage += boosts.damage;
+                if(boosts.fireRate) w.fireRate *= boosts.fireRate;
+            });
+
+            this.timedEffects.push({
+                duration,
+                onEnd: () => {
+                    this.weapons.forEach(w => {
+                        if(boosts.damage) w.damage -= boosts.damage;
+                        if(boosts.fireRate) w.fireRate /= boosts.fireRate;
+                    });
+                }
+            });
+        },
+
+        applyHealOverTime(amountPerSec, duration, initialHeal) {
+            if(initialHeal) this.heal(initialHeal);
+            this.timedEffects.push({
+                duration,
+                tick: true,
+                timeSinceTick: 0,
+                onTick: () => this.heal(amountPerSec)
+            });
+        },
+
+        clearTempBoosts() {
+            this.tempBoosts.forEach(boost => {
+                const weapon = this.weapons[boost.weaponIndex];
+                if (weapon) {
+                    if (boost.stat === 'damage') weapon.damage -= boost.value;
+                    if (boost.stat === 'fireRate') weapon.fireRate /= boost.value;
+                }
+            });
+            this.tempBoosts = [];
+        }
+    };
+
+    // ====================================================================================
+    // IV. ENEMY SYSTEMS (REFACTORED FOR STABILITY)
+    // ====================================================================================
+    const EnemyManager = {
+        enemies: [],
+        
+        spawnWave(waveNum) {
+            PlayerManager.clearTempBoosts();
+            const enemyCount = 5 + waveNum * 2;
+            for (let i = 0; i < enemyCount; i++) {
+                const spawnMargin = 50;
+                let x, y;
+                if (Math.random() < 0.5) {
+                    x = Math.random() < 0.5 ? -spawnMargin : canvas.width + spawnMargin;
+                    y = Math.random() * canvas.height;
+                } else {
+                    x = Math.random() * canvas.width;
+                    y = Math.random() < 0.5 ? -spawnMargin : canvas.height + spawnMargin;
+                }
+                const health = 5 + waveNum;
+                this.enemies.push({ x, y, radius: 12, health, maxHealth: health, speed: 50 + waveNum, damage: 5 });
+            }
+        },
+        
+        update(deltaTime) {
+            // 1. Update positions and check for core collision
+            this.enemies.forEach(enemy => {
+                if (enemy.health <= 0) return; // Skip dead enemies
+
+                const angle = Math.atan2(PlayerManager.y - enemy.y, PlayerManager.x - enemy.x);
+                enemy.x += Math.cos(angle) * enemy.speed * deltaTime;
+                enemy.y += Math.sin(angle) * enemy.speed * deltaTime;
+
+                const dist = Math.hypot(PlayerManager.x - enemy.x, PlayerManager.y - enemy.y);
+                if (dist < PlayerManager.radius + enemy.radius) {
+                    PlayerManager.takeDamage(enemy.damage);
+                    enemy.health = 0; // Mark for death upon collision
+                }
+            });
+
+            // 2. Process and remove dead enemies
+            const livingEnemies = [];
+            const waveWasCleared = this.enemies.length > 0;
+
+            this.enemies.forEach(enemy => {
+                if (enemy.health > 0) {
+                    livingEnemies.push(enemy);
+                } else {
+                    // This enemy is dead, trigger death effects
+                    ParticleManager.createEffect('explosion', { x: enemy.x, y: enemy.y, count: 20 });
+                    PlayerManager.addScrap(1);
+                    GameManager.addPoints(10);
+                }
+            });
+            
+            this.enemies = livingEnemies;
+
+            // 3. Check for wave end
+            if (waveWasCleared && this.enemies.length === 0 && GameManager.state === GameState.RUNNING) {
+                GameManager.nextWave();
+            }
+        },
+
+        // This function simply marks damage and does not modify the array.
+        takeDamage(enemy, amount) {
+            if (enemy.health > 0) { // Prevent overkill effects on already dead enemies
+                enemy.health -= amount;
+            }
+        },
+
+        findNearest(x, y) {
+            let nearest = null;
+            let minDist = Infinity;
+            this.enemies.forEach(e => {
+                if (e.health <= 0) return; // Don't target dead enemies
+                const dist = Math.hypot(x - e.x, y - e.y);
+                if (dist < minDist) {
+                    minDist = dist;
+                    nearest = e;
+                }
+            });
+            return nearest;
+        },
+
+        // This is safe now because takeDamage doesn't modify the array.
+        damageAll(amount) {
+            this.enemies.forEach(enemy => {
+                this.takeDamage(enemy, amount);
+            });
+             ParticleManager.createEffect('screenShake', { intensity: 8, duration: 0.4 });
+        }
+    };
+    
+    // ====================================================================================
+    // V. UI & INTERACTION
+    // ====================================================================================
+    const UIManager = {
+        cardWidth: 100, cardHeight: 140, handY: 0,
+        handPositions: [],
+        hoveredCardIndex: -1,
+        isRecycling: null,
+
+        init() {
+            this.handY = canvas.height - this.cardHeight - 20;
+            canvas.addEventListener('mousemove', this.handleMouseMove.bind(this));
+            canvas.addEventListener('click', this.handleMouseClick.bind(this));
+        },
+
+        update(deltaTime) {
+             this.handPositions.forEach(pos => {
+                if (pos.flashTime > 0) {
+                    pos.flashTime -= deltaTime;
+                }
+            });
+        },
+        
+        recalculateHandPositions() {
+            const handWidth = CardManager.hand.length * (this.cardWidth + 10) - 10;
+            const startX = (canvas.width - handWidth) / 2;
+            this.handPositions = CardManager.hand.map((_, i) => ({
+                x: startX + i * (this.cardWidth + 10),
+                y: this.handY,
+                flashTime: 0
+            }));
+        },
+
+        flashCardRed(index) {
+            if(this.handPositions[index]) {
+                this.handPositions[index].flashTime = 0.5;
+            }
+        },
+        
+        handleMouseMove(e) {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            this.hoveredCardIndex = -1;
+            let somethingHovered = false;
+
+            // Card hover
+            this.handPositions.forEach((pos, i) => {
+                if (mouseX > pos.x && mouseX < pos.x + this.cardWidth &&
+                    mouseY > pos.y && mouseY < pos.y + this.cardHeight) {
+                    this.hoveredCardIndex = i;
+                    somethingHovered = true;
+                    this.showTooltip(CardManager.hand[i], e.clientX + 20, e.clientY);
+                }
+            });
+            
+            // Shop item hover
+            if (GameManager.state === GameState.SHOP) {
+                ShopManager.wares.forEach((ware, i) => {
+                    const pos = ShopManager.getWarePosition(i);
+                     if (mouseX > pos.x && mouseX < pos.x + ShopManager.cardWidth &&
+                         mouseY > pos.y && mouseY < pos.y + ShopManager.cardHeight) {
+                        somethingHovered = true;
+                        this.showTooltip(ware.card, e.clientX + 20, e.clientY);
+                     }
+                });
+            }
+
+            if (!somethingHovered) {
+                tooltip.style.display = 'none';
+            }
+        },
+        
+        handleMouseClick(e) {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            
+            // Shop Click
+            if (GameManager.state === GameState.SHOP) {
+                ShopManager.handleClick(mouseX, mouseY);
+                return;
+            }
+
+            // Game Running Click (cards)
+            if(GameManager.state === GameState.RUNNING && this.hoveredCardIndex !== -1) {
+                const card = CardManager.hand[this.hoveredCardIndex];
+
+                if(this.isRecycling) {
+                    if (this.isRecycling.uid === card.uid) { // Clicked the recycling card again
+                        this.isRecycling = null; // Cancel
+                    } else { // Clicked a different card to discard
+                        CardManager.discardCard(this.hoveredCardIndex);
+                        CardManager.drawCards(1);
+                        this.isRecycling = null;
+                    }
+                } else {
+                    CardManager.playCard(card, this.hoveredCardIndex);
+                }
+            }
+        },
+        
+        showTooltip(card, x, y) {
+            tooltip.style.display = 'block';
+            tooltip.style.left = `${x}px`;
+            tooltip.style.top = `${y - 150}px`;
+            document.getElementById('tooltip-title').textContent = card.name;
+            document.getElementById('tooltip-cost').textContent = card.cost;
+            document.getElementById('tooltip-type').textContent = card.type;
+            document.getElementById('tooltip-desc').textContent = card.desc;
+        }
+    };
+    
+    // ====================================================================================
+    // VI. SHOP SYSTEM
+    // ====================================================================================
+    const ShopManager = {
+        wares: [],
+        cardWidth: 150, cardHeight: 210,
+        
+        generateWares() {
+            const shopPool = Object.keys(CardManager.masterCardList)
+                .filter(id => id.startsWith('shop_'))
+                .sort(() => 0.5 - Math.random());
+            
+            this.wares = shopPool.slice(0, 3).map(id => {
+                const card = CardManager.masterCardList[id];
+                return { card: { ...card, id, uid: Math.random()}, cost: card.cost * 5 }; // Scrap cost
+            });
+        },
+        
+        getWarePosition(index) {
+            const totalWidth = this.wares.length * (this.cardWidth + 40) - 40;
+            const startX = (canvas.width - totalWidth) / 2;
+            return {
+                x: startX + index * (this.cardWidth + 40),
+                y: (canvas.height - this.cardHeight) / 2
+            };
+        },
+
+        handleClick(mouseX, mouseY) {
+             // Skip button
+            const skipBtn = {x: canvas.width / 2 - 75, y: canvas.height - 80, w: 150, h: 50};
+            if(mouseX > skipBtn.x && mouseX < skipBtn.x + skipBtn.w && mouseY > skipBtn.y && mouseY < skipBtn.y + skipBtn.h) {
+                GameManager.nextWave();
+                return;
+            }
+
+            this.wares.forEach((ware, i) => {
+                const pos = this.getWarePosition(i);
+                if (mouseX > pos.x && mouseX < pos.x + this.cardWidth &&
+                    mouseY > pos.y && mouseY < pos.y + this.cardHeight) {
+                    if (PlayerManager.scrap >= ware.cost) {
+                        PlayerManager.spendScrap(ware.cost);
+                        CardManager.discard.push(ware.card);
+                        this.wares.splice(i, 1);
+                    }
+                }
+            });
+        }
+    };
+
+    // ====================================================================================
+    // VII. PARTICLE & EFFECTS SYSTEM
+    // ====================================================================================
+    const ParticleManager = {
+        particles: [],
+        screenShake: { intensity: 0, duration: 0 },
+        
+        createEffect(type, options) {
+            switch(type) {
+                case 'explosion':
+                    for(let i=0; i<options.count; i++) {
+                        const angle = Math.random() * Math.PI * 2;
+                        const speed = Math.random() * 150 + 50;
+                        this.particles.push({
+                            type, x: options.x, y: options.y,
+                            vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+                            life: Math.random() * 0.5 + 0.5, radius: Math.random() * 3 + 1,
+                            color: `hsl(${Math.random() * 20 + 0}, 100%, 50%)`
+                        });
+                    }
+                    break;
+                case 'projectile':
+                    this.particles.push({ ...options, type, speed: 600, radius: 4 });
+                    break;
+                case 'cardPlay':
+                    for(let i=0; i<15; i++) {
+                        const angle = Math.atan2(PlayerManager.y - options.y, PlayerManager.x - options.x) + (Math.random() - 0.5);
+                        const speed = 600 + Math.random() * 200;
+                         this.particles.push({
+                            type: 'trail', x: options.x, y: options.y,
+                            vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+                            life: 0.5, color: '#ff00ff', radius: 2
+                         });
+                    }
+                    break;
+                case 'shieldHit':
+                    for(let i=0; i<36; i++) {
+                        const angle = (i * 10) * Math.PI / 180;
+                        this.particles.push({
+                           type: 'explosion', x: options.x, y: options.y,
+                           vx: Math.cos(angle) * 100, vy: Math.sin(angle) * 100,
+                           life: 0.3, radius: 2, color: '#00ffff'
+                        });
+                    }
+                    break;
+                case 'screenShake':
+                    this.screenShake.intensity = Math.max(this.screenShake.intensity, options.intensity);
+                    this.screenShake.duration = Math.max(this.screenShake.duration, options.duration);
+                    break;
+            }
+        },
+        
+        update(deltaTime) {
+            this.particles.forEach((p, index) => {
+                p.life -= deltaTime;
+                if (p.life <= 0) {
+                    this.particles.splice(index, 1);
+                    return;
+                }
+                
+                switch(p.type) {
+                    case 'explosion':
+                    case 'trail':
+                        p.x += p.vx * deltaTime;
+                        p.y += p.vy * deltaTime;
+                        p.vx *= 0.98; // Add some friction/drag
+                        p.vy *= 0.98;
+                        break;
+                    case 'projectile':
+                        // FIX: Ensure target exists and is alive before moving/damaging
+                        if (!p.target || p.target.health <= 0) {
+                            p.life = 0; // Fizzle out
+                            return;
+                        }
+                        const angle = Math.atan2(p.target.y - p.y, p.target.x - p.x);
+                        const moveX = Math.cos(angle) * p.speed * deltaTime;
+                        const moveY = Math.sin(angle) * p.speed * deltaTime;
+                        p.x += moveX;
+                        p.y += moveY;
+                        
+                        // Add trail
+                        this.particles.push({ type: 'trail', x: p.x, y: p.y, vx:0, vy:0, life: 0.2, radius: p.radius*0.8, color: '#00ffff' });
+
+                        const dist = Math.hypot(p.x - p.target.x, p.y - p.target.y);
+                        if (dist < p.target.radius) {
+                            EnemyManager.takeDamage(p.target, p.damage);
+                            p.life = 0; // remove projectile
+                        }
+                        break;
+                }
+            });
+
+            if (this.screenShake.duration > 0) {
+                this.screenShake.duration -= deltaTime;
+                if (this.screenShake.duration <= 0) {
+                    this.screenShake.intensity = 0;
+                }
+            }
+        },
+
+        applyScreenShake() {
+            if (this.screenShake.intensity > 0) {
+                const x = (Math.random() - 0.5) * this.screenShake.intensity;
+                const y = (Math.random() - 0.5) * this.screenShake.intensity;
+                ctx.translate(x, y);
+            }
+        }
+    };
+    
+    // ====================================================================================
+    // VIII. RENDERER
+    // ====================================================================================
+    const Renderer = {
+        drawAll() {
+            this.drawEnemies();
+            this.drawPlayer();
+            this.drawParticles();
+            this.drawUI();
+            
+            if (GameManager.state === GameState.SHOP) this.drawShop();
+            if (GameManager.state === GameState.GAMEOVER) this.drawGameOver();
+        },
+        
+        drawBackgroundGrid() {
+            ctx.strokeStyle = "rgba(0, 255, 255, 0.1)";
+            ctx.lineWidth = 1;
+            for (let i = 0; i < canvas.width; i += 40) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i, canvas.height);
+                ctx.stroke();
+            }
+            for (let i = 0; i < canvas.height; i += 40) {
+                ctx.beginPath();
+                ctx.moveTo(0, i);
+                ctx.lineTo(canvas.width, i);
+                ctx.stroke();
+            }
+        },
+        
+        drawPlayer() {
+            // Health Ring
+            const healthPercent = PlayerManager.health / PlayerManager.maxHealth;
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 10;
+            ctx.beginPath();
+            ctx.arc(PlayerManager.x, PlayerManager.y, PlayerManager.radius + 10, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            ctx.strokeStyle = '#00ffff';
+            ctx.beginPath();
+            ctx.arc(PlayerManager.x, PlayerManager.y, PlayerManager.radius + 10, -Math.PI/2, -Math.PI/2 + healthPercent * Math.PI * 2);
+            ctx.stroke();
+            
+            // Core
+            ctx.fillStyle = '#fff';
+            ctx.shadowColor = '#00ffff';
+            ctx.shadowBlur = 15;
+            ctx.beginPath();
+            ctx.arc(PlayerManager.x, PlayerManager.y, PlayerManager.radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // Shield
+            if (PlayerManager.shield > 0) {
+                ctx.strokeStyle = `rgba(0, 255, 255, ${0.5 + (PlayerManager.shield / 10)})`;
+                ctx.lineWidth = 3 + PlayerManager.shield;
+                ctx.beginPath();
+                ctx.arc(PlayerManager.x, PlayerManager.y, PlayerManager.radius + 25 + Math.sin(Date.now()/200)*2, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        },
+        
+        drawEnemies() {
+            EnemyManager.enemies.forEach(e => {
+                ctx.fillStyle = `hsl(10, 100%, 50%)`;
+                ctx.strokeStyle = '#ffddaa';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            });
+        },
+        
+        drawParticles() {
+            ParticleManager.particles.forEach(p => {
+                ctx.globalAlpha = p.life < 0.2 ? p.life / 0.2 : 1;
+                ctx.fillStyle = p.color || '#ff00ff';
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            });
+        },
+        
+        drawUI() {
+            // Fuel Bar
+            const barHeight = canvas.height * 0.4;
+            const barY = (canvas.height - barHeight) / 2;
+            ctx.strokeStyle = '#ff00ff';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(30, barY, 20, barHeight);
+            
+            const fuelPercent = PlayerManager.fuel / PlayerManager.maxFuel;
+            const fuelHeight = barHeight * fuelPercent;
+            ctx.fillStyle = '#ff00ff';
+            ctx.fillRect(30, barY + barHeight - fuelHeight, 20, fuelHeight);
+            ctx.shadowColor = '#ff00ff';
+            ctx.shadowBlur = 10;
+            ctx.textAlign = 'center';
+            ctx.font = '20px Orbitron';
+            ctx.fillText(PlayerManager.fuel, 40, barY + barHeight + 30);
+            ctx.shadowBlur = 0;
+            
+            // Top UI
+            ctx.textAlign = 'left';
+            ctx.fillText(`Wave: ${GameManager.wave}`, 20, 40);
+            ctx.textAlign = 'right';
+            ctx.fillText(`Scrap: ${PlayerManager.scrap}`, canvas.width - 20, 40);
+
+            // Hand
+            UIManager.handPositions.forEach((pos, i) => {
+                const card = CardManager.hand[i];
+                ctx.save();
+                
+                // Card flashing if not enough fuel
+                if(pos.flashTime > 0) {
+                     ctx.shadowColor = 'red';
+                     ctx.shadowBlur = 20;
+                } else if(UIManager.hoveredCardIndex === i || (UIManager.isRecycling && UIManager.isRecycling.uid === card.uid)) {
+                     ctx.shadowColor = '#ffff00';
+                     ctx.shadowBlur = 20;
+                     ctx.translate(0, -20);
+                }
+
+                // Card body
+                ctx.fillStyle = '#0a0a1a';
+                ctx.strokeStyle = '#00ffff';
+                ctx.lineWidth = 2;
+                ctx.fillRect(pos.x, pos.y, UIManager.cardWidth, UIManager.cardHeight);
+                ctx.strokeRect(pos.x, pos.y, UIManager.cardWidth, UIManager.cardHeight);
+
+                // Type border
+                const typeColors = { "Attack": "#ff4444", "Defense": "#4488ff", "Utility": "#44ff44", "Permanent": "#ffff00" };
+                ctx.fillStyle = typeColors[card.type] || '#fff';
+                ctx.fillRect(pos.x, pos.y, UIManager.cardWidth, 5);
+
+                // Text
+                ctx.fillStyle = 'white';
+                ctx.textAlign = 'center';
+                ctx.font = '14px Orbitron';
+                ctx.fillText(card.name, pos.x + UIManager.cardWidth / 2, pos.y + 30);
+                
+                // Cost
+                ctx.fillStyle = '#ff00ff';
+                ctx.font = 'bold 24px Orbitron';
+                ctx.textAlign = 'left';
+                ctx.fillText(card.cost, pos.x + 10, pos.y + UIManager.cardHeight - 10);
+                
+                ctx.restore();
+            });
+        },
+        
+        drawShop() {
+            ctx.fillStyle = 'rgba(0,0,0,0.7)';
+            ctx.fillRect(0,0,canvas.width, canvas.height);
+            
+            ctx.fillStyle = 'white';
+            ctx.textAlign = 'center';
+            ctx.font = '40px Orbitron';
+            ctx.fillText("Parts Shop", canvas.width / 2, 100);
+            
+            ShopManager.wares.forEach((ware, i) => {
+                const pos = ShopManager.getWarePosition(i);
+                // Card rendering (simplified from hand)
+                ctx.fillStyle = '#0a0a1a';
+                ctx.strokeStyle = '#ffff00';
+                ctx.lineWidth = 3;
+                ctx.fillRect(pos.x, pos.y, ShopManager.cardWidth, ShopManager.cardHeight);
+                ctx.strokeRect(pos.x, pos.y, ShopManager.cardWidth, ShopManager.cardHeight);
+                
+                ctx.fillStyle = 'white';
+                ctx.font = '18px Orbitron';
+                ctx.fillText(ware.card.name, pos.x + ShopManager.cardWidth/2, pos.y + 40);
+                
+                ctx.fillStyle = '#00ff00';
+                ctx.font = 'bold 20px Orbitron';
+                ctx.fillText(`Scrap: ${ware.cost}`, pos.x + ShopManager.cardWidth/2, pos.y + ShopManager.cardHeight - 20);
+            });
+            
+            // Skip Button
+            const skipBtn = {x: canvas.width / 2 - 75, y: canvas.height - 80, w: 150, h: 50};
+            ctx.fillStyle = '#333';
+            ctx.fillRect(skipBtn.x, skipBtn.y, skipBtn.w, skipBtn.h);
+            ctx.strokeStyle = 'white';
+            ctx.strokeRect(skipBtn.x, skipBtn.y, skipBtn.w, skipBtn.h);
+            ctx.fillStyle = 'white';
+            ctx.font = '24px Orbitron';
+            ctx.fillText("Continue", canvas.width / 2, skipBtn.y + 35);
+        },
+        
+        drawGameOver() {
+             ctx.fillStyle = 'rgba(0,0,0,0.8)';
+             ctx.fillRect(0,0,canvas.width, canvas.height);
+             ctx.fillStyle = 'red';
+             ctx.font = 'bold 70px Orbitron';
+             ctx.textAlign = 'center';
+             ctx.fillText("CORE OFFLINE", canvas.width/2, canvas.height/2);
+             ctx.fillStyle = 'white';
+             ctx.font = '30px Orbitron';
+             ctx.fillText(`Survived ${GameManager.wave - 1} waves`, canvas.width/2, canvas.height/2 + 50);
+        }
+    };
+    
+    // ====================================================================================
+    // IX. INITIALIZATION
+    // ====================================================================================
+    window.addEventListener('load', () => {
+        GameManager.init();
+    });
+
+    </script>
+</body>
+</html>
