@@ -95,7 +95,10 @@
             CardManager.init();
             UIManager.init();
             
-            this.nextWave();
+            // **FIX: Manually start Wave 1 to prevent logic error**
+            this.wave = 1;
+            EnemyManager.spawnWave(this.wave);
+            
             GameManager.loop();
         },
         
@@ -123,9 +126,10 @@
             requestAnimationFrame(this.loop.bind(this));
         },
         
+        // **FIX: This function now handles all waves AFTER the first one**
         nextWave() {
             this.wave++;
-            if (this.wave > 1 && (this.wave - 1) % 5 === 0) {
+            if ((this.wave - 1) % 5 === 0 && this.wave > 1) {
                 this.state = GameState.SHOP;
                 ShopManager.generateWares();
             } else {
@@ -372,10 +376,11 @@
     };
 
     // ====================================================================================
-    // IV. ENEMY SYSTEMS (REFACTORED FOR STABILITY)
+    // IV. ENEMY SYSTEMS
     // ====================================================================================
     const EnemyManager = {
         enemies: [],
+        isWaveActive: false,
         
         spawnWave(waveNum) {
             PlayerManager.clearTempBoosts();
@@ -393,12 +398,14 @@
                 const health = 5 + waveNum;
                 this.enemies.push({ x, y, radius: 12, health, maxHealth: health, speed: 50 + waveNum, damage: 5 });
             }
+            this.isWaveActive = true;
         },
         
         update(deltaTime) {
-            // 1. Update positions and check for core collision
+            if (!this.isWaveActive) return;
+
             this.enemies.forEach(enemy => {
-                if (enemy.health <= 0) return; // Skip dead enemies
+                if (enemy.health <= 0) return; 
 
                 const angle = Math.atan2(PlayerManager.y - enemy.y, PlayerManager.x - enemy.x);
                 enemy.x += Math.cos(angle) * enemy.speed * deltaTime;
@@ -407,19 +414,15 @@
                 const dist = Math.hypot(PlayerManager.x - enemy.x, PlayerManager.y - enemy.y);
                 if (dist < PlayerManager.radius + enemy.radius) {
                     PlayerManager.takeDamage(enemy.damage);
-                    enemy.health = 0; // Mark for death upon collision
+                    enemy.health = 0;
                 }
             });
 
-            // 2. Process and remove dead enemies
             const livingEnemies = [];
-            const waveWasCleared = this.enemies.length > 0;
-
             this.enemies.forEach(enemy => {
                 if (enemy.health > 0) {
                     livingEnemies.push(enemy);
                 } else {
-                    // This enemy is dead, trigger death effects
                     ParticleManager.createEffect('explosion', { x: enemy.x, y: enemy.y, count: 20 });
                     PlayerManager.addScrap(1);
                     GameManager.addPoints(10);
@@ -428,15 +431,14 @@
             
             this.enemies = livingEnemies;
 
-            // 3. Check for wave end
-            if (waveWasCleared && this.enemies.length === 0 && GameManager.state === GameState.RUNNING) {
+            if (this.isWaveActive && this.enemies.length === 0 && GameManager.state === GameState.RUNNING) {
+                this.isWaveActive = false;
                 GameManager.nextWave();
             }
         },
 
-        // This function simply marks damage and does not modify the array.
         takeDamage(enemy, amount) {
-            if (enemy.health > 0) { // Prevent overkill effects on already dead enemies
+            if (enemy.health > 0) {
                 enemy.health -= amount;
             }
         },
@@ -445,7 +447,7 @@
             let nearest = null;
             let minDist = Infinity;
             this.enemies.forEach(e => {
-                if (e.health <= 0) return; // Don't target dead enemies
+                if (e.health <= 0) return;
                 const dist = Math.hypot(x - e.x, y - e.y);
                 if (dist < minDist) {
                     minDist = dist;
@@ -455,7 +457,6 @@
             return nearest;
         },
 
-        // This is safe now because takeDamage doesn't modify the array.
         damageAll(amount) {
             this.enemies.forEach(enemy => {
                 this.takeDamage(enemy, amount);
@@ -696,9 +697,8 @@
                         p.vy *= 0.98;
                         break;
                     case 'projectile':
-                        // FIX: Ensure target exists and is alive before moving/damaging
                         if (!p.target || p.target.health <= 0) {
-                            p.life = 0; // Fizzle out
+                            p.life = 0; 
                             return;
                         }
                         const angle = Math.atan2(p.target.y - p.y, p.target.x - p.x);
@@ -707,13 +707,12 @@
                         p.x += moveX;
                         p.y += moveY;
                         
-                        // Add trail
                         this.particles.push({ type: 'trail', x: p.x, y: p.y, vx:0, vy:0, life: 0.2, radius: p.radius*0.8, color: '#00ffff' });
 
                         const dist = Math.hypot(p.x - p.target.x, p.y - p.target.y);
                         if (dist < p.target.radius) {
                             EnemyManager.takeDamage(p.target, p.damage);
-                            p.life = 0; // remove projectile
+                            p.life = 0;
                         }
                         break;
                 }
