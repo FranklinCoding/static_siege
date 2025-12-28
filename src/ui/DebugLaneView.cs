@@ -69,8 +69,9 @@ public partial class DebugLaneView : Node2D
 
     private Font GetFont()
     {
-        // Use the default font; if absent, Godot supplies a fallback.
-        return GetThemeDefaultFont();
+        var font = GetThemeFont("font");
+        if (font != null) return font;
+        return Theme.DefaultFont;
     }
 }
 
