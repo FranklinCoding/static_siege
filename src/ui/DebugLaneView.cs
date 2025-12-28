@@ -46,18 +46,22 @@ public partial class DebugLaneView : Node2D
         // Core indicator
         DrawCircle(center, 18, new Color(0.1f, 0.9f, 0.9f, 0.8f));
 
-        // HUD overlay
-        if (_resources != null)
+        var font = GetFont();
+        if (font != null)
         {
-            DrawString(GetFont(), new Vector2(10, 20),
-                $"HP {_resources.Health}/{_resources.HealthMax}  Shield {_resources.Shield}  Fuel {_resources.Fuel}/{_resources.FuelMax}  Scrap {_resources.Scrap}",
-                modulate: new Color(0.8f, 0.95f, 1f));
-        }
+            // HUD overlay
+            if (_resources != null)
+            {
+                DrawString(font, new Vector2(10, 20),
+                    $"HP {_resources.Health}/{_resources.HealthMax}  Shield {_resources.Shield}  Fuel {_resources.Fuel}/{_resources.FuelMax}  Scrap {_resources.Scrap}",
+                    modulate: new Color(0.8f, 0.95f, 1f));
+            }
 
-        if (_runState != null)
-        {
-            DrawString(GetFont(), new Vector2(size.X - 160, 20),
-                $"Wave {_runState.Wave}", modulate: new Color(1f, 1f, 0.6f));
+            if (_runState != null)
+            {
+                DrawString(font, new Vector2(size.X - 160, 20),
+                    $"Wave {_runState.Wave}", modulate: new Color(1f, 1f, 0.6f));
+            }
         }
     }
 
@@ -67,16 +71,10 @@ public partial class DebugLaneView : Node2D
         _runState = runState;
     }
 
-    private Font GetFont()
+    private Font? GetFont()
     {
-        // Try to get the default font from the current theme; allow null if absent.
-        var theme = Theme;
-        if (theme != null)
-        {
-            var font = theme.DefaultFont;
-            if (font != null) return font;
-        }
-        return null;
+        // Return the current theme's default font if available; may be null.
+        return this.Theme?.DefaultFont;
     }
 }
 
