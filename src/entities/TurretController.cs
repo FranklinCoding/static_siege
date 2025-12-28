@@ -1,0 +1,95 @@
+using Godot;
+using StaticSiege.Combat;
+using StaticSiege.Effects;
+
+namespace StaticSiege.Entities;
+
+/// <summary>
+/// Auto-firing turret. Visual/projectile handling should be added in scene scripts.
+/// </summary>
+public partial class TurretController : Node
+{
+    [Export] public float Damage { get; set; } = 1f;
+    [Export] public float FireRateSeconds { get; set; } = 1f;
+
+    private float _fireTimer;
+    private LaneManager? _laneManager;
+    private StatusBucket? _statuses;
+
+    public void Bind(LaneManager laneManager, StatusBucket statuses)
+    {
+        _laneManager = laneManager;
+        _statuses = statuses;
+    }
+
+    public override void _Process(double delta)
+    {
+        _fireTimer -= (float)delta;
+        _statuses?.Tick((float)delta);
+
+        if (_fireTimer > 0 || _laneManager == null) return;
+
+        var target = _laneManager.FindNearestEnemy();
+        if (target == null) return;
+
+        var (damage, cadence) = ComputeModifiedFireParams();
+        var killed = target.ApplyDamage(damage);
+        if (killed)
+        {
+            // reward added elsewhere
+        }
+
+        _fireTimer = cadence;
+    }
+
+    public void ApplyWeaponModifier(string stat, float magnitude, float duration)
+    {
+        // Example: fire_rate stat uses multiplicative change for duration.
+        if (stat == "fire_rate")
+        {
+            FireRateSeconds = System.Math.Max(0.05f, FireRateSeconds * magnitude);
+            if (duration > 0)
+            {
+                _statuses?.Add(new StatusEffect
+                {
+                    Id = "fire_rate_temp",
+                    Duration = duration,
+                    Magnitude = magnitude,
+                    Stacking = StatusStacking.Refresh
+                });
+            }
+        }
+        else if (stat == "damage")
+        {
+            Damage += magnitude;
+        }
+    }
+
+    public void EmitAreaDamage(float magnitude)
+    {
+        // Hook for scene VFX; deal flat damage to all enemies.
+        // A simple approach would be to ask the lane manager to iterate enemies.
+        // Implementation to be added alongside visuals.
+    }
+
+    private (float damage, float cadence) ComputeModifiedFireParams()
+    {
+        float damage = Damage;
+        float cadence = FireRateSeconds;
+
+        if (_statuses != null)
+        {
+            foreach (var status in _statuses.Effects)
+            {
+                if (status.Id == "pierce") continue; // handled by projectile logic later
+                if (status.Id == "fire_rate_temp")
+                {
+                    cadence = System.Math.Max(0.05f, cadence * status.Magnitude);
+                }
+            }
+        }
+
+        return (damage, cadence);
+    }
+}
+

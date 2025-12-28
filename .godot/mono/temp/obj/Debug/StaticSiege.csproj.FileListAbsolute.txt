@@ -1,0 +1,13 @@
+C:\Users\JusFr\Documents\GitHub\static_siege\static_siege\.godot\mono\temp\obj\Debug\StaticSiege.csproj.AssemblyReference.cache
+C:\Users\JusFr\Documents\GitHub\static_siege\static_siege\.godot\mono\temp\obj\Debug\StaticSiege.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\JusFr\Documents\GitHub\static_siege\static_siege\.godot\mono\temp\obj\Debug\StaticSiege.AssemblyInfoInputs.cache
+C:\Users\JusFr\Documents\GitHub\static_siege\static_siege\.godot\mono\temp\obj\Debug\StaticSiege.AssemblyInfo.cs
+C:\Users\JusFr\Documents\GitHub\static_siege\static_siege\.godot\mono\temp\obj\Debug\StaticSiege.csproj.CoreCompileInputs.cache
+C:\Users\JusFr\Documents\GitHub\static_siege\static_siege\.godot\mono\temp\obj\Debug\StaticSiege.sourcelink.json
+C:\Users\JusFr\Documents\GitHub\static_siege\static_siege\.godot\mono\temp\bin\Debug\StaticSiege.deps.json
+C:\Users\JusFr\Documents\GitHub\static_siege\static_siege\.godot\mono\temp\bin\Debug\StaticSiege.dll
+C:\Users\JusFr\Documents\GitHub\static_siege\static_siege\.godot\mono\temp\bin\Debug\StaticSiege.pdb
+C:\Users\JusFr\Documents\GitHub\static_siege\static_siege\.godot\mono\temp\obj\Debug\StaticSiege.dll
+C:\Users\JusFr\Documents\GitHub\static_siege\static_siege\.godot\mono\temp\obj\Debug\refint\StaticSiege.dll
+C:\Users\JusFr\Documents\GitHub\static_siege\static_siege\.godot\mono\temp\obj\Debug\StaticSiege.pdb
+C:\Users\JusFr\Documents\GitHub\static_siege\static_siege\.godot\mono\temp\obj\Debug\ref\StaticSiege.dll

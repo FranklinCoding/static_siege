@@ -1,0 +1,39 @@
+[
+  {
+    "id": "grunt",
+    "name": "Grunt",
+    "max_health": 10,
+    "speed": 40,
+    "damage": 5,
+    "armor": 0,
+    "scrap_reward": 1
+  },
+  {
+    "id": "runner",
+    "name": "Runner",
+    "max_health": 6,
+    "speed": 70,
+    "damage": 3,
+    "armor": 0,
+    "scrap_reward": 1
+  },
+  {
+    "id": "tank",
+    "name": "Tank",
+    "max_health": 24,
+    "speed": 25,
+    "damage": 8,
+    "armor": 2,
+    "scrap_reward": 2
+  },
+  {
+    "id": "swarm",
+    "name": "Swarm",
+    "max_health": 4,
+    "speed": 50,
+    "damage": 2,
+    "armor": 0,
+    "scrap_reward": 1
+  }
+]
+
