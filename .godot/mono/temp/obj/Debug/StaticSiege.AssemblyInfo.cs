@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("StaticSiege")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c73911b50219c2cd0b6ccf57068c584d3c49fcd1")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f28931fbb2f5f4f31b897b55f7f0badfeb3766a4")]
 [assembly: System.Reflection.AssemblyProductAttribute("StaticSiege")]
 [assembly: System.Reflection.AssemblyTitleAttribute("StaticSiege")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
