@@ -71,7 +71,18 @@ public partial class DebugLaneView : Node2D
     {
         var font = GetThemeFont("font");
         if (font != null) return font;
-        return Theme.DefaultFont;
+        // Fallback: use the default theme font from the current tree
+        var tree = GetTree();
+        if (tree?.Root != null)
+        {
+            var t = tree.Root.Theme;
+            if (t != null)
+            {
+                var fallback = t.DefaultFont;
+                if (fallback != null) return fallback;
+            }
+        }
+        return null;
     }
 }
 
