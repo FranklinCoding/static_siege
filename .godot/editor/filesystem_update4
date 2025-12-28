@@ -1,6 +1,0 @@
-res://src/combat/WaveSpawner.cs
-res://src/combat/LaneManager.cs
-res://src/entities/TurretController.cs
-res://src/Main.cs
-res://src/ui/DebugLaneView.cs
-res://src/effects/EffectDef.cs

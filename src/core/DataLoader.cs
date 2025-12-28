@@ -7,6 +7,7 @@ using StaticSiege.Cards;
 using StaticSiege.Combat;
 using StaticSiege.Entities;
 using StaticSiege.Effects;
+using StaticSiege.Run;
 
 namespace StaticSiege.Core;
 
@@ -46,6 +47,13 @@ public static class DataLoader
             return JsonSerializer.Deserialize<List<EncounterDef>>(json, Options) ?? new List<EncounterDef>();
         }
 
+        public static (string Seed, IReadOnlyList<MapNodeDef> Nodes) LoadMap(string path)
+        {
+            var json = ReadFile(path);
+            var dto = JsonSerializer.Deserialize<MapDto>(json, Options) ?? new MapDto();
+            return (dto.Seed ?? string.Empty, dto.Nodes ?? new List<MapNodeDef>());
+        }
+
     private static string ReadFile(string path)
     {
         using var file = FileAccess.Open(path, FileAccess.ModeFlags.Read);
@@ -76,6 +84,12 @@ public static class DataLoader
                 Effects = Effects
             };
         }
+    }
+
+    private sealed class MapDto
+    {
+        public string? Seed { get; set; }
+        public List<MapNodeDef>? Nodes { get; set; }
     }
 }
 
