@@ -7,6 +7,7 @@
 [ext_resource type="Script" path="res://src/run/RunManager.cs" id="5"]
 [ext_resource type="Script" path="res://src/ui/MapView.cs" id="6"]
 [ext_resource type="Script" path="res://src/ui/RewardView.cs" id="7"]
+[ext_resource type="FontFile" path="res://default_font.tres" id="8" detected_type="Font"]
 
 [node name="Main" type="Node"]
 script = ExtResource("1")
@@ -15,6 +16,7 @@ TurretPath = NodePath("TurretController")
 RunManagerPath = NodePath("RunManager")
 MapViewPath = NodePath("CanvasLayer/MapView")
 RewardViewPath = NodePath("CanvasLayer/RewardView")
+RunCompleteLabelPath = NodePath("CanvasLayer/RunCompleteLabel")
 
 [node name="EncounterManager" type="Node" parent="."]
 script = ExtResource("2")
@@ -60,4 +62,18 @@ offset_left = 0.0
 offset_top = 0.0
 offset_right = 0.0
 offset_bottom = 0.0
+
+[node name="RunCompleteLabel" type="Label" parent="CanvasLayer"]
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 200.0
+offset_bottom = 30.0
+anchor_left = 0.4
+anchor_top = 0.1
+anchor_right = 0.6
+anchor_bottom = 0.15
+horizontal_alignment = 1
+theme_override_fonts/font = ExtResource("8")
+text = "Run Complete!"
+visible = false
 

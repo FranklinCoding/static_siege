@@ -20,12 +20,14 @@ public partial class Main : Node
     [Export] public NodePath? RunManagerPath;
     [Export] public NodePath? MapViewPath;
     [Export] public NodePath? RewardViewPath;
+    [Export] public NodePath? RunCompleteLabelPath;
 
     private RunState _runState = new();
     private EffectResolver? _resolver;
     private RunManager? _runManager;
     private MapView? _mapView;
     private RewardView? _rewardView;
+    private Label? _runCompleteLabel;
 
     public override void _Ready()
     {
@@ -35,6 +37,7 @@ public partial class Main : Node
         var debugView = GetNodeOrNull<DebugLaneView>("DebugLaneView");
         _mapView = GetNodeOrNull<MapView>(MapViewPath ?? string.Empty);
         _rewardView = GetNodeOrNull<RewardView>(RewardViewPath ?? string.Empty);
+        _runCompleteLabel = GetNodeOrNull<Label>(RunCompleteLabelPath ?? string.Empty);
 
         // Load data
         var cards = DataLoader.LoadCards("res://data/cards.json");
@@ -130,6 +133,7 @@ public partial class Main : Node
             if (next == null)
             {
                 _runManager.MarkComplete();
+                _runCompleteLabel?.Show();
             }
             else
             {
