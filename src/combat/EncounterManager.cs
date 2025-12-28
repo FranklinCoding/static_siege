@@ -14,11 +14,14 @@ public partial class EncounterManager : Node
 {
     [Export] public NodePath? TurretPath;
 
+    public System.Action? OnEncounterComplete;
+
     private readonly List<EnemyInstance> _enemies = new();
     private readonly List<ActiveSpawn> _spawns = new();
     private Dictionary<string, EnemyDef> _enemyLookup = new();
     private TurretController? _turret;
     private Resources? _resources;
+    private bool _encounterActive;
 
     public IReadOnlyList<EnemyInstance> Enemies => _enemies;
 
@@ -43,12 +46,14 @@ public partial class EncounterManager : Node
             if (!_enemyLookup.TryGetValue(s.Enemy, out var defEnemy)) continue;
             _spawns.Add(new ActiveSpawn(s, defEnemy));
         }
+        _encounterActive = true;
     }
 
     public override void _Process(double delta)
     {
         TickSpawns((float)delta);
         TickEnemies((float)delta);
+        MaybeComplete();
     }
 
     public EnemyInstance? FindNearestEnemy()
@@ -108,6 +113,18 @@ public partial class EncounterManager : Node
                 _resources.AddFuel(0); // placeholder hook for energy if renamed
                 _enemies.RemoveAt(i);
             }
+        }
+    }
+
+    private void MaybeComplete()
+    {
+        if (!_encounterActive) return;
+        var spawnsDone = _spawns.Count == 0;
+        var enemiesDone = _enemies.Count == 0;
+        if (spawnsDone && enemiesDone)
+        {
+            _encounterActive = false;
+            OnEncounterComplete?.Invoke();
         }
     }
 

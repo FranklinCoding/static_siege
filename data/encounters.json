@@ -5,6 +5,14 @@
     "spawns": [
       { "enemy": "grunt", "count": 6, "cadence": 1.0, "arc_degrees": 360, "radius": 14 }
     ]
+  },
+  {
+    "id": "encounter_boss_1",
+    "difficulty": 2.5,
+    "spawns": [
+      { "enemy": "tank", "count": 2, "cadence": 3.0, "arc_degrees": 360, "radius": 16 },
+      { "enemy": "swarm", "count": 8, "cadence": 0.8, "arc_degrees": 360, "radius": 14 }
+    ]
   }
 ]
 

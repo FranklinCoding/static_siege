@@ -1,0 +1,10 @@
+{
+  "seed": "demo-seed",
+  "nodes": [
+    { "id": "n1", "type": "battle", "encounter": "encounter_basic_1", "next": ["n2"] },
+    { "id": "n2", "type": "rest",    "next": ["n3"] },
+    { "id": "n3", "type": "battle", "encounter": "encounter_basic_1", "next": ["n4"] },
+    { "id": "n4", "type": "boss",   "encounter": "encounter_boss_1",  "next": [] }
+  ]
+}
+
