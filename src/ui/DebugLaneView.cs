@@ -5,19 +5,20 @@ using StaticSiege.Core;
 namespace StaticSiege.UI;
 
 /// <summary>
-/// Minimal 2D debug visuals: draws lanes as vertical bands and enemies as circles moving toward the core.
+/// Minimal 2D debug visuals: draws arena enemies as circles around the core.
+/// NOTE: Lanes are deprecated; this view now reads from EncounterManager.
 /// </summary>
 public partial class DebugLaneView : Node2D
 {
-    [Export] public NodePath? LaneManagerPath;
+    [Export] public NodePath? EncounterManagerPath;
 
-    private LaneManager? _lanes;
+    private EncounterManager? _encounter;
     private Resources? _resources;
     private RunState? _runState;
 
     public override void _Ready()
     {
-        _lanes = GetNode<LaneManager>(LaneManagerPath ?? string.Empty);
+        _encounter = GetNode<EncounterManager>(EncounterManagerPath ?? string.Empty);
     }
 
     public override void _Process(double delta)
@@ -27,36 +28,23 @@ public partial class DebugLaneView : Node2D
 
     public override void _Draw()
     {
-        if (_lanes == null) return;
+        if (_encounter == null) return;
 
         var size = GetViewportRect().Size;
-        var laneWidth = size.X / Mathf.Max(1, _lanes.Lanes.Count);
-        var top = 40f;
-        var bottom = size.Y - 80f;
-        var laneHeight = bottom - top;
+        var center = size / 2f;
+        var scale = 20f; // world unit to screen scaling for debug
 
-        for (int i = 0; i < _lanes.Lanes.Count; i++)
+        foreach (var enemy in _encounter.Enemies)
         {
-            var laneX = i * laneWidth;
-            var color = new Color(0.1f, 0.15f, 0.3f, 0.4f);
-            DrawRect(new Rect2(laneX + 4, top, laneWidth - 8, laneHeight), color);
+            var pos = center + enemy.Position * scale;
+            DrawCircle(pos, 10, new Color(0.9f, 0.2f, 0.2f, 0.9f));
 
-            foreach (var enemy in _lanes.Lanes[i].Enemies)
-            {
-                var t = Mathf.Clamp(1f - (enemy.DistanceToCore / Mathf.Max(0.001f, _lanes.Lanes[i].Length)), 0, 1);
-                var y = Mathf.Lerp(top, bottom, t);
-                var x = laneX + laneWidth * 0.5f;
-                DrawCircle(new Vector2(x, y), 10, new Color(0.9f, 0.2f, 0.2f, 0.9f));
-
-                // Health bar
-                var hpPct = Mathf.Clamp(enemy.Health / enemy.Def.MaxHealth, 0, 1);
-                DrawRect(new Rect2(x - 12, y - 14, 24 * hpPct, 3), new Color(0.2f, 1f, 0.2f, 0.9f));
-            }
+            var hpPct = Mathf.Clamp(enemy.Health / enemy.Def.MaxHealth, 0, 1);
+            DrawRect(new Rect2(pos.X - 12, pos.Y - 14, 24 * hpPct, 3), new Color(0.2f, 1f, 0.2f, 0.9f));
         }
 
         // Core indicator
-        var corePos = new Vector2(size.X * 0.5f, bottom + 30f);
-        DrawCircle(corePos, 18, new Color(0.1f, 0.9f, 0.9f, 0.8f));
+        DrawCircle(center, 18, new Color(0.1f, 0.9f, 0.9f, 0.8f));
 
         // HUD overlay
         if (_resources != null)

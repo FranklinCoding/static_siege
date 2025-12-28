@@ -1,32 +1,25 @@
 [gd_scene load_steps=4 format=3 uid="uid://static_siege_main"]
 
 [ext_resource type="Script" path="res://src/Main.cs" id="1"]
-[ext_resource type="Script" path="res://src/combat/LaneManager.cs" id="2"]
-[ext_resource type="Script" path="res://src/combat/WaveSpawner.cs" id="3"]
-[ext_resource type="Script" path="res://src/entities/TurretController.cs" id="4"]
-[ext_resource type="Script" path="res://src/ui/DebugLaneView.cs" id="5"]
+[ext_resource type="Script" path="res://src/combat/EncounterManager.cs" id="2"]
+[ext_resource type="Script" path="res://src/entities/TurretController.cs" id="3"]
+[ext_resource type="Script" path="res://src/ui/DebugLaneView.cs" id="4"]
 
 [node name="Main" type="Node"]
 script = ExtResource("1")
-LaneManagerPath = NodePath("LaneManager")
-WaveSpawnerPath = NodePath("WaveSpawner")
+EncounterManagerPath = NodePath("EncounterManager")
 TurretPath = NodePath("TurretController")
 
-[node name="LaneManager" type="Node" parent="."]
+[node name="EncounterManager" type="Node" parent="."]
 script = ExtResource("2")
-LaneCount = 3
-LaneLength = 20.0
-
-[node name="WaveSpawner" type="Node" parent="."]
-script = ExtResource("3")
-LaneManagerPath = NodePath("../LaneManager")
+TurretPath = NodePath("../TurretController")
 
 [node name="TurretController" type="Node" parent="."]
-script = ExtResource("4")
+script = ExtResource("3")
 Damage = 1.0
 FireRateSeconds = 1.0
 
 [node name="DebugLaneView" type="Node2D" parent="."]
-script = ExtResource("5")
-LaneManagerPath = NodePath("../LaneManager")
+script = ExtResource("4")
+EncounterManagerPath = NodePath("../EncounterManager")
 

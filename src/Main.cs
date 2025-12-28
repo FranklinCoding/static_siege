@@ -14,8 +14,7 @@ namespace StaticSiege;
 /// </summary>
 public partial class Main : Node
 {
-    [Export] public NodePath? LaneManagerPath;
-    [Export] public NodePath? WaveSpawnerPath;
+    [Export] public NodePath? EncounterManagerPath;
     [Export] public NodePath? TurretPath;
 
     private RunState _runState = new();
@@ -23,15 +22,14 @@ public partial class Main : Node
 
     public override void _Ready()
     {
-        var laneManager = GetNode<LaneManager>(LaneManagerPath ?? string.Empty);
-        var waveSpawner = GetNode<WaveSpawner>(WaveSpawnerPath ?? string.Empty);
+        var encounterManager = GetNode<EncounterManager>(EncounterManagerPath ?? string.Empty);
         var turret = GetNode<TurretController>(TurretPath ?? string.Empty);
         var debugView = GetNodeOrNull<DebugLaneView>("DebugLaneView");
 
         // Load data
         var cards = DataLoader.LoadCards("res://data/cards.json");
         var enemies = DataLoader.LoadEnemies("res://data/enemies.json");
-        var waves = DataLoader.LoadWaves("res://data/waves.json");
+        var encounters = DataLoader.LoadEncounters("res://data/encounters.json");
 
         // Starter deck: take first N cards from data.
         var starterDeck = cards.Count > 0 ? cards : Array.Empty<CardDef>();
@@ -40,12 +38,14 @@ public partial class Main : Node
         _runState.StartRun(starterDeck);
 
         // Wire systems
-        laneManager.Init(_runState.Resources);
-        waveSpawner.LoadEnemies(enemies);
-        waveSpawner.StartWave(waves.Count > 0 ? waves[0] : new WaveDef { Wave = 1 });
+        encounterManager.Init(enemies, turret, _runState.Resources);
+        if (encounters.Count > 0)
+        {
+            encounterManager.StartEncounter(encounters[0]);
+        }
 
         _resolver = new EffectResolver(_runState, turret);
-        turret.Bind(laneManager, _runState.Statuses);
+        turret.Bind(encounterManager, _runState.Statuses);
         debugView?.Bind(_runState.Resources, _runState);
     }
 

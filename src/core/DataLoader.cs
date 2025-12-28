@@ -11,7 +11,7 @@ using StaticSiege.Effects;
 namespace StaticSiege.Core;
 
 /// <summary>
-/// Loads JSON data for cards, enemies, and waves. Intended to be called at boot.
+    /// Loads JSON data for cards, enemies, and waves/encounters. Intended to be called at boot.
 /// </summary>
 public static class DataLoader
 {
@@ -39,6 +39,12 @@ public static class DataLoader
         var json = ReadFile(path);
         return JsonSerializer.Deserialize<List<WaveDef>>(json, Options) ?? new List<WaveDef>();
     }
+
+        public static IReadOnlyList<EncounterDef> LoadEncounters(string path)
+        {
+            var json = ReadFile(path);
+            return JsonSerializer.Deserialize<List<EncounterDef>>(json, Options) ?? new List<EncounterDef>();
+        }
 
     private static string ReadFile(string path)
     {

@@ -1,0 +1,10 @@
+[
+  {
+    "id": "encounter_basic_1",
+    "difficulty": 1.0,
+    "spawns": [
+      { "enemy": "grunt", "count": 6, "cadence": 1.0, "arc_degrees": 360, "radius": 14 }
+    ]
+  }
+]
+

@@ -10,11 +10,11 @@ src/               // C# logic
   core/            // run-level state, resources
   cards/           // card defs, deck/hand/discard
   effects/         // effect defs + resolver, statuses
-  combat/          // lanes, spawner, waves
+  combat/          // encounters (arena), legacy lanes/spawner kept for reference
   entities/        // turret, enemies, weapons
   ui/              // UI scripts (placeholder)
   meta/            // meta progression stubs
-data/              // JSON for cards/enemies/waves
+data/              // JSON for cards/enemies/encounters (waves kept for reference)
 scenes/            // Godot scenes/prefabs
 tests/             // unit/integration (headless)
 docs/              // design docs, prompts
@@ -22,22 +22,21 @@ docs/proto/        // HTML prototype reference
 ```
 
 ## Core loop (run state)
-- States: `RunStart -> WavePrep (shop/draft) -> WavePlay -> WaveEnd -> Shop/Next -> RunEnd`.
-- `RunState` owns wave number, resources, RNG, deck state, run modifiers.
-- `WaveSpawner` consumes `WaveDef` data and emits spawn events into `LaneManager`.
-- `LaneManager` ticks enemies; collisions damage the core via `Resources`.
-- `TurretController` auto-targets per cadence; cards modify turret/weapons/status.
+- States (legacy): wave loop. Actively migrating to encounter-based real-time arena.
+- `RunState` owns wave number (will become node/act), resources, RNG, deck state, run modifiers.
+- `EncounterManager` consumes `EncounterDef` data and spawns enemies around the core; legacy `WaveSpawner`/`LaneManager` kept but not wired.
+- `TurretController` auto-targets nearest enemy; cards modify turret/weapons/status.
 - `EffectResolver` processes card effects and timed effects; supports stacking rules in `StatusEffect`.
 
 ## Data-driven systems
 - `data/cards.json`: card defs, costs, type, `effects[]` with `kind`, `magnitude`, `duration`, `count`, `tags`.
 - `data/enemies.json`: hp, speed, damage, armor, reward scrap.
-- `data/waves.json`: per-wave spawn groups and scaling hooks.
+- `data/encounters.json`: per-encounter spawn groups (arena). `data/waves.json` kept for reference only.
 
 ## Testing and sandboxes
 - Unit-testable logic lives in plain C# (no scene dependencies) inside `src/core`, `src/cards`, `src/effects`, `src/combat`.
-- Add small sandbox scenes (not yet created) for lane sim, hand UI, and spawner timing.
-- Guardrails: assertions on resource floors, deck counts, lane bounds; JSON validation on load.
+- Add small sandbox scenes for encounter spawning, hand UI, and turret targeting.
+- Guardrails: assertions on resource floors, deck counts, bounds; JSON validation on load.
 
 ## Migration notes
 - Keep `index.html` as design reference (`docs/proto/index.html` points to it).

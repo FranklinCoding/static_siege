@@ -7,6 +7,7 @@ namespace StaticSiege.Combat;
 
 /// <summary>
 /// Godot-facing lane manager. UI/visuals can observe enemies list per lane.
+/// DEPRECATED: superseded by EncounterManager (arena-based). Kept for reference; not wired in Main.
 /// </summary>
 public partial class LaneManager : Node
 {
