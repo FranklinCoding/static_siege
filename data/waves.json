@@ -1,0 +1,38 @@
+[
+  {
+    "wave": 1,
+    "groups": [
+      { "enemy": "grunt", "count": 6, "cadence": 1.2, "lane": "any" }
+    ]
+  },
+  {
+    "wave": 2,
+    "groups": [
+      { "enemy": "grunt", "count": 6, "cadence": 1.0, "lane": "any" },
+      { "enemy": "runner", "count": 3, "cadence": 2.0, "lane": "random" }
+    ]
+  },
+  {
+    "wave": 3,
+    "groups": [
+      { "enemy": "grunt", "count": 6, "cadence": 1.0, "lane": "any" },
+      { "enemy": "tank", "count": 2, "cadence": 3.5, "lane": "wide" }
+    ]
+  },
+  {
+    "wave": 4,
+    "groups": [
+      { "enemy": "runner", "count": 6, "cadence": 0.8, "lane": "any" },
+      { "enemy": "swarm", "count": 8, "cadence": 0.6, "lane": "any" }
+    ]
+  },
+  {
+    "wave": 5,
+    "groups": [
+      { "enemy": "grunt", "count": 8, "cadence": 0.9, "lane": "any" },
+      { "enemy": "tank", "count": 3, "cadence": 3.0, "lane": "center" }
+    ],
+    "reward_shop": true
+  }
+]
+

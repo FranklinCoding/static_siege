@@ -1,0 +1,97 @@
+[
+  {
+    "id": "overclock",
+    "name": "Overclock",
+    "cost": 2,
+    "type": "Attack",
+    "description": "All turret weapons fire 50% faster for 8s.",
+    "exiles": false,
+    "effects": [
+      {
+        "kind": "ModifyWeaponStat",
+        "stat": "fire_rate",
+        "multiplier": 0.5,
+        "duration": 8
+      }
+    ]
+  },
+  {
+    "id": "piercing_shot",
+    "name": "Piercing Shot",
+    "cost": 1,
+    "type": "Attack",
+    "description": "Next 3 shots pierce one extra target.",
+    "exiles": false,
+    "effects": [
+      {
+        "kind": "ApplyStatus",
+        "status": "pierce",
+        "count": 3,
+        "stacking": "stack"
+      }
+    ]
+  },
+  {
+    "id": "scrap_shield",
+    "name": "Scrap Shield",
+    "cost": 2,
+    "type": "Defense",
+    "description": "Gain 10 shield this wave.",
+    "exiles": false,
+    "effects": [
+      {
+        "kind": "AddShield",
+        "magnitude": 10,
+        "duration": 8
+      }
+    ]
+  },
+  {
+    "id": "salvage",
+    "name": "Salvage",
+    "cost": 0,
+    "type": "Utility",
+    "description": "Gain 6 scrap. Exhaust.",
+    "exiles": true,
+    "effects": [
+      {
+        "kind": "AddScrap",
+        "magnitude": 6
+      }
+    ]
+  },
+  {
+    "id": "recycle",
+    "name": "Recycle",
+    "cost": 0,
+    "type": "Utility",
+    "description": "Discard your hand, then draw that many.",
+    "exiles": false,
+    "effects": [
+      {
+        "kind": "DiscardHand"
+      },
+      {
+        "kind": "DrawCards",
+        "count": 0,
+        "useDiscardedCount": true
+      }
+    ]
+  },
+  {
+    "id": "auto_loader",
+    "name": "Auto Loader",
+    "cost": 3,
+    "type": "Permanent",
+    "description": "Permanently increase hand size by 1. Exhaust.",
+    "exiles": true,
+    "effects": [
+      {
+        "kind": "ModifyHandSize",
+        "magnitude": 1,
+        "permanent": true
+      }
+    ]
+  }
+]
+
