@@ -13,12 +13,12 @@ public partial class TurretController : Node
     [Export] public float FireRateSeconds { get; set; } = 1f;
 
     private float _fireTimer;
-    private LaneManager? _laneManager;
+    private EncounterManager? _encounter;
     private StatusBucket? _statuses;
 
-    public void Bind(LaneManager laneManager, StatusBucket statuses)
+    public void Bind(EncounterManager encounter, StatusBucket statuses)
     {
-        _laneManager = laneManager;
+        _encounter = encounter;
         _statuses = statuses;
     }
 
@@ -27,9 +27,9 @@ public partial class TurretController : Node
         _fireTimer -= (float)delta;
         _statuses?.Tick((float)delta);
 
-        if (_fireTimer > 0 || _laneManager == null) return;
+        if (_fireTimer > 0 || _encounter == null) return;
 
-        var target = _laneManager.FindNearestEnemy();
+        var target = _encounter.FindNearestEnemy();
         if (target == null) return;
 
         var (damage, cadence) = ComputeModifiedFireParams();

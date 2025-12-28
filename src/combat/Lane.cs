@@ -4,6 +4,7 @@ using StaticSiege.Entities;
 
 namespace StaticSiege.Combat;
 
+// DEPRECATED: superseded by EncounterManager (arena-based). Kept for reference; not wired in Main.
 public sealed class Lane
 {
     public int Index { get; }

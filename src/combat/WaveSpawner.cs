@@ -7,6 +7,7 @@ namespace StaticSiege.Combat;
 
 /// <summary>
 /// Drives timed spawning for a wave using data-driven WaveDef entries.
+/// DEPRECATED: superseded by EncounterManager (arena-based). Left for reference; not wired in Main.
 /// </summary>
 public partial class WaveSpawner : Node
 {
