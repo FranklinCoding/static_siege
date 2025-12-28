@@ -1,0 +1,5 @@
+res://src/Main.cs
+res://src/combat/EncounterManager.cs
+res://src/run/RunManager.cs
+res://src/ui/MapView.cs
+res://src/ui/RewardView.cs
