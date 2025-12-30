@@ -4,19 +4,19 @@ namespace StaticSiege.Core;
 
 public sealed class Resources
 {
-    public int Fuel { get; private set; } = 5;
-    public int FuelMax { get; private set; } = 10;
+    public int Energy { get; private set; } = 5;
+    public int EnergyCap { get; private set; } = 10;
     public int Scrap { get; private set; }
     public int Health { get; private set; } = 100;
     public int HealthMax { get; private set; } = 100;
     public int Shield { get; private set; }
     public int Armor { get; private set; }
 
-    public void AddFuel(int amount) => Fuel = Math.Clamp(Fuel + amount, 0, FuelMax);
-    public bool TrySpendFuel(int amount)
+    public void AddEnergy(int amount) => Energy = Math.Clamp(Energy + amount, 0, EnergyCap);
+    public bool TrySpendEnergy(int amount)
     {
-        if (Fuel < amount) return false;
-        Fuel -= amount;
+        if (Energy < amount) return false;
+        Energy -= amount;
         return true;
     }
 
@@ -53,10 +53,10 @@ public sealed class Resources
     }
 
     public void IncreaseArmor(int amount) => Armor += amount;
-    public void IncreaseFuelCap(int amount)
+    public void SetEnergyCap(int cap)
     {
-        FuelMax += amount;
-        Fuel = Math.Min(Fuel, FuelMax);
+        EnergyCap = Math.Max(0, cap);
+        Energy = Math.Min(Energy, EnergyCap);
     }
 }
 

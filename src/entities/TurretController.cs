@@ -11,15 +11,31 @@ public partial class TurretController : Node
 {
     [Export] public float Damage { get; set; } = 1f;
     [Export] public float FireRateSeconds { get; set; } = 1f;
+    [Export] public Vector2 Origin { get; set; } = Vector2.Zero;
+    [Export] public NodePath? ProjectileManagerPath;
 
     private float _fireTimer;
     private EncounterManager? _encounter;
     private StatusBucket? _statuses;
+    private ProjectileManager? _projectiles;
 
     public void Bind(EncounterManager encounter, StatusBucket statuses)
     {
         _encounter = encounter;
         _statuses = statuses;
+    }
+
+    public void SetProjectileManager(ProjectileManager pm)
+    {
+        _projectiles = pm;
+    }
+
+    public override void _Ready()
+    {
+        if (ProjectileManagerPath != null && !ProjectileManagerPath.IsEmpty)
+        {
+            _projectiles = GetNodeOrNull<ProjectileManager>(ProjectileManagerPath);
+        }
     }
 
     public override void _Process(double delta)
@@ -34,6 +50,7 @@ public partial class TurretController : Node
 
         var (damage, cadence) = ComputeModifiedFireParams();
         var killed = target.ApplyDamage(damage);
+        _projectiles?.SpawnProjectile(Origin, target.Position);
         if (killed)
         {
             // reward added elsewhere

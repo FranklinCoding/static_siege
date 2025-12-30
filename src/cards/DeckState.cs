@@ -15,7 +15,8 @@ public sealed class DeckState
     private readonly List<CardInstance> _hand = new();
     private readonly List<CardInstance> _exhaust = new();
 
-    private int _handLimit = 5;
+    public int StartingHandSize { get; set; } = 6;
+    public int HandLimit { get; set; } = 6;
 
     public IReadOnlyList<CardInstance> Hand => _hand;
 
@@ -32,7 +33,7 @@ public sealed class DeckState
         }
 
         Shuffle(_drawPile, rng);
-        TryDraw(4, rng);
+        TryDraw(StartingHandSize, rng);
     }
 
     public void OnWaveStart() => DiscardHand();
@@ -42,7 +43,7 @@ public sealed class DeckState
         var drewAny = false;
         for (var i = 0; i < count; i++)
         {
-            if (_hand.Count >= _handLimit) break;
+            if (_hand.Count >= HandLimit) break;
             if (_drawPile.Count == 0)
             {
                 if (_discard.Count == 0) break;
@@ -57,18 +58,28 @@ public sealed class DeckState
         return drewAny;
     }
 
-    public bool TryPlay(int handIndex, Core.Resources resources, Effects.EffectResolver resolver)
+    public bool TryPlay(int handIndex, Core.Resources resources, Effects.EffectResolver resolver, RandomNumberGenerator rng, out bool drewReplacement)
     {
+        drewReplacement = false;
         if (handIndex < 0 || handIndex >= _hand.Count) return false;
         var card = _hand[handIndex];
-        if (!resources.TrySpendFuel(card.Def.Cost)) return false;
+        if (!resources.TrySpendEnergy(card.Def.Cost)) return false;
 
         resolver.Resolve(card, card.Def.Effects);
 
         if (card.Def.Exiles) _exhaust.Add(card);
         else _discard.Add(card);
 
-        _hand.RemoveAt(handIndex);
+        if (handIndex >= 0 && handIndex < _hand.Count)
+        {
+            _hand.RemoveAt(handIndex);
+        }
+        else
+        {
+            return false;
+        }
+        // Draw replacement
+        drewReplacement = TryDraw(1, rng);
         return true;
     }
 
@@ -80,7 +91,7 @@ public sealed class DeckState
 
     public void ModifyHandSize(int delta, bool permanent)
     {
-        _handLimit = Math.Max(1, _handLimit + delta);
+        HandLimit = Math.Max(1, HandLimit + delta);
         if (!permanent) return;
         // Placeholder: persist to meta or run-level flags as needed.
     }

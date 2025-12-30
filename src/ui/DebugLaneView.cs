@@ -40,7 +40,14 @@ public partial class DebugLaneView : Node2D
             DrawCircle(pos, 10, new Color(0.9f, 0.2f, 0.2f, 0.9f));
 
             var hpPct = Mathf.Clamp(enemy.Health / enemy.Def.MaxHealth, 0, 1);
-            DrawRect(new Rect2(pos.X - 12, pos.Y - 14, 24 * hpPct, 3), new Color(0.2f, 1f, 0.2f, 0.9f));
+            var barWidth = 26f;
+            var barHeight = 4f;
+            var barX = pos.X - barWidth / 2f;
+            var barY = pos.Y - 16f;
+            // Background
+            DrawRect(new Rect2(barX, barY, barWidth, barHeight), new Color(0, 0, 0, 0.6f));
+            // Foreground
+            DrawRect(new Rect2(barX, barY, barWidth * hpPct, barHeight), new Color(0.2f, 1f, 0.2f, 0.9f));
         }
 
         // Core indicator
@@ -53,7 +60,7 @@ public partial class DebugLaneView : Node2D
             if (_resources != null)
             {
                 DrawString(font, new Vector2(10, 20),
-                    $"HP {_resources.Health}/{_resources.HealthMax}  Shield {_resources.Shield}  Fuel {_resources.Fuel}/{_resources.FuelMax}  Scrap {_resources.Scrap}",
+                    $"HP {_resources.Health}/{_resources.HealthMax}  Shield {_resources.Shield}  Energy {_resources.Energy}/{_resources.EnergyCap}  Scrap {_resources.Scrap}",
                     modulate: new Color(0.8f, 0.95f, 1f));
             }
 
@@ -62,6 +69,9 @@ public partial class DebugLaneView : Node2D
                 DrawString(font, new Vector2(size.X - 160, 20),
                     $"Wave {_runState.Wave}", modulate: new Color(1f, 1f, 0.6f));
             }
+
+            DrawString(font, new Vector2(10, size.Y - 20),
+                $"Enemies: {_encounter.Enemies.Count}", modulate: new Color(0.8f, 0.9f, 1f));
         }
     }
 
@@ -73,8 +83,8 @@ public partial class DebugLaneView : Node2D
 
     private Font? GetFont()
     {
-        // Return the current theme's default font if available; may be null.
-        return this.Theme?.DefaultFont;
+        // Minimal fallback: no explicit font; drawing will be skipped if null.
+        return null;
     }
 }
 

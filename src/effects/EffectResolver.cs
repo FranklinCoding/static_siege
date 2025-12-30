@@ -30,7 +30,7 @@ public sealed class EffectResolver
                     ApplyWeaponMod(effect);
                     break;
                 case EffectKind.AddResource:
-                    _runState.Resources.AddFuel((int)effect.Magnitude);
+                    _runState.Resources.AddEnergy((int)effect.Magnitude);
                     break;
                 case EffectKind.AddScrap:
                     _runState.Resources.AddScrap((int)effect.Magnitude);

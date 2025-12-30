@@ -1,1 +1,13 @@
+res://src/combat/EncounterManager.cs
+res://src/run/RunManager.cs
+res://src/combat/LaneManager.cs
+res://src/ui/DebugLaneView.cs
+res://src/combat/WaveSpawner.cs
+res://src/entities/TurretController.cs
+res://src/ui/MapView.cs
+res://src/ui/HudView.cs
+res://src/ui/RewardView.cs
+res://src/ui/CombatHandView.cs
+res://src/combat/ProjectileManager.cs
 res://src/Main.cs
+res://scenes/Main.tscn

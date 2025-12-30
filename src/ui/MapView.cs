@@ -1,10 +1,11 @@
 using Godot;
+using System.Linq;
 using StaticSiege.Run;
 
 namespace StaticSiege.UI;
 
 /// <summary>
-/// Minimal map chooser for PR #3: renders current node and next selectable nodes as buttons.
+/// Minimal map chooser with clearer layout and phase-aware interactivity.
 /// </summary>
 public partial class MapView : Control
 {
@@ -28,42 +29,92 @@ public partial class MapView : Control
         if (_runManager == null) return;
         ClearChildren();
 
+        var margin = new MarginContainer
+        {
+            CustomMinimumSize = new Vector2(200, 0),
+            SizeFlagsHorizontal = SizeFlags.Fill,
+            SizeFlagsVertical = SizeFlags.Fill,
+            MouseFilter = MouseFilterEnum.Ignore
+        };
+        margin.AddThemeConstantOverride("margin_left", 6);
+        margin.AddThemeConstantOverride("margin_right", 6);
+        margin.AddThemeConstantOverride("margin_top", 6);
+        margin.AddThemeConstantOverride("margin_bottom", 6);
+
+        var panel = new PanelContainer
+        {
+            SizeFlagsHorizontal = SizeFlags.Fill,
+            SizeFlagsVertical = SizeFlags.Fill
+        };
+        margin.AddChild(panel);
+
+        var vbox = new VBoxContainer
+        {
+            SizeFlagsHorizontal = SizeFlags.ExpandFill,
+            SizeFlagsVertical = SizeFlags.ExpandFill
+        };
+
         var current = _runManager.GetCurrentNode();
-        AddLabel($"Current: {current?.Id} [{current?.Type}] (phase: {_runManager.Context.Phase})");
+        var phase = _runManager.Context.Phase;
+        vbox.AddChild(new Label { Text = $"Phase: {phase}" });
+        vbox.AddChild(new Label { Text = $"Current: {current?.Id ?? "None"} [{current?.Type}]" });
 
-        if (current != null && _runManager.Context.Phase == RunPhase.InMap)
+        if (current != null)
         {
-            AddButton($"Enter {current.Id} ({current.Type})", () => Handle(current));
+            if (phase == RunPhase.InMap)
+            {
+                vbox.AddChild(MakeButton($"Enter {current.Id} ({current.Type})", () => Handle(current)));
+            }
+            else
+            {
+                vbox.AddChild(new Label { Text = "(Locked: in battle/reward)" });
+            }
         }
 
-        foreach (var next in _runManager.GetAvailableNext())
+        var nextNodes = _runManager.GetAvailableNext().ToList();
+        vbox.AddChild(new Label { Text = "Next:" });
+        if (nextNodes.Count == 0)
         {
-            AddButton($"Next: {next.Id} ({next.Type})", () => Handle(next));
+            vbox.AddChild(new Label { Text = "None" });
         }
+        else
+        {
+            foreach (var next in nextNodes)
+            {
+                var btn = MakeButton($"{next.Id} ({next.Type})", () => Handle(next));
+                btn.Disabled = phase != RunPhase.InMap;
+                vbox.AddChild(btn);
+            }
+        }
+
+        panel.AddChild(vbox);
+        AddChild(margin);
+    }
+
+    private Button MakeButton(string text, System.Action onPress)
+    {
+        var btn = new Button { Text = text, SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        btn.Pressed += () => onPress();
+        return btn;
     }
 
     private void Handle(MapNodeDef node)
     {
         switch (node.Type)
         {
-            case MapNodeType.Battle: OnBattleSelected?.Invoke(node); break;
-            case MapNodeType.Boss:   OnBossSelected?.Invoke(node); break;
-            case MapNodeType.Shop:   OnShopSelected?.Invoke(node); break;
-            case MapNodeType.Rest:   OnRestSelected?.Invoke(node); break;
+            case MapNodeType.Battle:
+                OnBattleSelected?.Invoke(node);
+                break;
+            case MapNodeType.Boss:
+                OnBossSelected?.Invoke(node);
+                break;
+            case MapNodeType.Shop:
+                OnShopSelected?.Invoke(node);
+                break;
+            case MapNodeType.Rest:
+                OnRestSelected?.Invoke(node);
+                break;
         }
-    }
-
-    private void AddButton(string text, System.Action onPress)
-    {
-        var btn = new Button { Text = text, SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        btn.Pressed += () => onPress();
-        AddChild(btn);
-    }
-
-    private void AddLabel(string text)
-    {
-        var lbl = new Label { Text = text };
-        AddChild(lbl);
     }
 
     private void ClearChildren()

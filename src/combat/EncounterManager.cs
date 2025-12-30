@@ -27,7 +27,10 @@ public partial class EncounterManager : Node
 
     public override void _Ready()
     {
+        GD.Randomize();
         _turret = GetNodeOrNull<TurretController>(TurretPath ?? string.Empty);
+        ProcessMode = ProcessModeEnum.Always;
+        SetProcess(true);
     }
 
     public void Init(IEnumerable<EnemyDef> enemies, TurretController turret, Resources resources)
@@ -41,10 +44,12 @@ public partial class EncounterManager : Node
     {
         _enemies.Clear();
         _spawns.Clear();
+        GD.Print($"[EncounterManager] StartEncounter id={def.Id} spawns={def.Spawns.Count}");
         foreach (var s in def.Spawns)
         {
             if (!_enemyLookup.TryGetValue(s.Enemy, out var defEnemy)) continue;
             _spawns.Add(new ActiveSpawn(s, defEnemy));
+            GD.Print($"[EncounterManager] queued spawn enemy={s.Enemy} count={s.Count} cadence={s.Cadence}");
         }
         _encounterActive = true;
     }
@@ -110,7 +115,7 @@ public partial class EncounterManager : Node
             {
                 // Gain resource on kill, clamped at cap by Resources.
                 _resources.AddScrap(e.Def.ScrapReward);
-                _resources.AddFuel(0); // placeholder hook for energy if renamed
+                _resources.AddEnergy(1);
                 _enemies.RemoveAt(i);
             }
         }

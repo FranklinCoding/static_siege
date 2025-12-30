@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Linq;
+using System.Text.Json.Serialization;
 using Godot;
 using StaticSiege.Cards;
 using StaticSiege.Combat;
@@ -19,7 +20,8 @@ public static class DataLoader
     private static readonly JsonSerializerOptions Options = new()
     {
         PropertyNameCaseInsensitive = true,
-        ReadCommentHandling = JsonCommentHandling.Skip
+        ReadCommentHandling = JsonCommentHandling.Skip,
+        Converters = { new JsonStringEnumConverter() }
     };
 
     public static IReadOnlyList<CardDef> LoadCards(string path)

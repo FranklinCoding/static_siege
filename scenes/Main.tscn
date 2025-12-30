@@ -1,12 +1,15 @@
-[gd_scene load_steps=6 format=3 uid="uid://static_siege_main"]
+[gd_scene load_steps=11 format=3 uid="uid://b8tmjeo8pmajb"]
 
-[ext_resource type="Script" path="res://src/Main.cs" id="1"]
-[ext_resource type="Script" path="res://src/combat/EncounterManager.cs" id="2"]
-[ext_resource type="Script" path="res://src/entities/TurretController.cs" id="3"]
-[ext_resource type="Script" path="res://src/ui/DebugLaneView.cs" id="4"]
-[ext_resource type="Script" path="res://src/run/RunManager.cs" id="5"]
-[ext_resource type="Script" path="res://src/ui/MapView.cs" id="6"]
-[ext_resource type="Script" path="res://src/ui/RewardView.cs" id="7"]
+[ext_resource type="Script" uid="uid://b1mypgimkvwmw" path="res://src/Main.cs" id="1"]
+[ext_resource type="Script" uid="uid://cxdra01nxdrgf" path="res://src/combat/EncounterManager.cs" id="2"]
+[ext_resource type="Script" uid="uid://drcje5dtpbct1" path="res://src/entities/TurretController.cs" id="3"]
+[ext_resource type="Script" uid="uid://coj2xtk0tv1k5" path="res://src/ui/DebugLaneView.cs" id="4"]
+[ext_resource type="Script" uid="uid://b22d1fbiwjc5e" path="res://src/run/RunManager.cs" id="5"]
+[ext_resource type="Script" uid="uid://dy6f8ye0qh5f3" path="res://src/ui/MapView.cs" id="6"]
+[ext_resource type="Script" uid="uid://bue4kpkl7alrv" path="res://src/ui/RewardView.cs" id="7"]
+[ext_resource type="Script" uid="uid://chcc675uf0g24" path="res://src/ui/CombatHandView.cs" id="8"]
+[ext_resource type="Script" uid="uid://cs17m55w4g3la" path="res://src/combat/ProjectileManager.cs" id="9"]
+[ext_resource type="Script" uid="uid://da0fi62450423" path="res://src/ui/HudView.cs" id="10"]
 
 [node name="Main" type="Node"]
 script = ExtResource("1")
@@ -16,6 +19,8 @@ RunManagerPath = NodePath("RunManager")
 MapViewPath = NodePath("CanvasLayer/MapView")
 RewardViewPath = NodePath("CanvasLayer/RewardView")
 RunCompleteLabelPath = NodePath("CanvasLayer/RunCompleteLabel")
+HandViewPath = NodePath("CanvasLayer/CombatHandView")
+HudViewPath = NodePath("CanvasLayer/HudView")
 
 [node name="EncounterManager" type="Node" parent="."]
 script = ExtResource("2")
@@ -23,12 +28,14 @@ TurretPath = NodePath("../TurretController")
 
 [node name="TurretController" type="Node" parent="."]
 script = ExtResource("3")
-Damage = 1.0
-FireRateSeconds = 1.0
+ProjectileManagerPath = NodePath("../ProjectileManager")
 
 [node name="DebugLaneView" type="Node2D" parent="."]
 script = ExtResource("4")
 EncounterManagerPath = NodePath("../EncounterManager")
+
+[node name="ProjectileManager" type="Node2D" parent="."]
+script = ExtResource("9")
 
 [node name="RunManager" type="Node" parent="."]
 script = ExtResource("5")
@@ -36,42 +43,85 @@ script = ExtResource("5")
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 
 [node name="MapView" type="Control" parent="CanvasLayer"]
-script = ExtResource("6")
-RunManagerPath = NodePath("../../RunManager")
 layout_mode = 3
-anchors_preset = 10
 anchor_left = 0.8
 anchor_top = 0.05
 anchor_right = 0.98
 anchor_bottom = 0.45
-offset_left = 0.0
-offset_top = 0.0
-offset_right = 0.0
-offset_bottom = 0.0
+grow_horizontal = 2
+script = ExtResource("6")
+RunManagerPath = NodePath("../../RunManager")
 
 [node name="RewardView" type="Control" parent="CanvasLayer"]
-script = ExtResource("7")
 layout_mode = 3
-anchors_preset = 2
 anchor_left = 0.35
 anchor_top = 0.35
 anchor_right = 0.65
 anchor_bottom = 0.65
-offset_left = 0.0
-offset_top = 0.0
-offset_right = 0.0
-offset_bottom = 0.0
+grow_vertical = 0
+script = ExtResource("7")
+
+[node name="CombatHandView" type="Control" parent="CanvasLayer"]
+layout_mode = 3
+anchor_left = 0.2
+anchor_top = 0.8
+anchor_right = 0.8
+anchor_bottom = 0.98
+grow_horizontal = 2
+grow_vertical = 0
+script = ExtResource("8")
+
+[node name="HudView" type="Control" parent="CanvasLayer"]
+layout_mode = 3
+anchor_left = 0.01
+anchor_top = 0.01
+anchor_right = 0.2
+anchor_bottom = 0.1
+mouse_filter = 2
+script = ExtResource("10")
+HpLabelPath = NodePath("HpLabel")
+EnergyLabelPath = NodePath("EnergyLabel")
+ScrapLabelPath = NodePath("ScrapLabel")
+EnemyLabelPath = NodePath("EnemyLabel")
+
+[node name="HudBg" type="ColorRect" parent="CanvasLayer/HudView"]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0, 0, 0, 0.35)
+
+[node name="HpLabel" type="Label" parent="CanvasLayer/HudView"]
+layout_mode = 0
+offset_right = 200.0
+offset_bottom = 20.0
+
+[node name="EnergyLabel" type="Label" parent="CanvasLayer/HudView"]
+layout_mode = 0
+offset_top = 20.0
+offset_right = 200.0
+offset_bottom = 40.0
+
+[node name="ScrapLabel" type="Label" parent="CanvasLayer/HudView"]
+layout_mode = 0
+offset_top = 40.0
+offset_right = 200.0
+offset_bottom = 60.0
+
+[node name="EnemyLabel" type="Label" parent="CanvasLayer/HudView"]
+layout_mode = 0
+offset_top = 60.0
+offset_right = 200.0
+offset_bottom = 80.0
 
 [node name="RunCompleteLabel" type="Label" parent="CanvasLayer"]
-offset_left = 0.0
-offset_top = 0.0
-offset_right = 200.0
-offset_bottom = 30.0
+visible = false
+anchors_preset = -1
 anchor_left = 0.4
 anchor_top = 0.1
 anchor_right = 0.6
 anchor_bottom = 0.15
-horizontal_alignment = 1
+offset_right = 200.0
+offset_bottom = 30.0
 text = "Run Complete!"
-visible = false
-
+horizontal_alignment = 1
